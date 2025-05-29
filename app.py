@@ -10,6 +10,26 @@ except Exception as e:
     st.error(f"❌ 데이터 로딩 실패: {e}")
     st.stop()
 
+st.set_page_config(layout="wide")
+# somewhere near top
+st.markdown("""
+<style>
+.block-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    max-width: 65% !important;
+}
+.element-container pre {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+}
+.stCodeBlock, .stMarkdown {
+    font-size: 14px;
+    max-width: 100% !important;
+    overflow-x: auto;
+}
+</style>
+""", unsafe_allow_html=True)
 
 st.sidebar.title("📌 DevOps 프로젝트 목록")
 titles = [e["title"] for e in experiments]

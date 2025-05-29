@@ -1,10 +1,10 @@
 [
   {
-    "title": "Jenkins + Docker로 CI 구축",
-    "date": "2024-10-10",
-    "tags": ["Jenkins", "Docker", "CI"],
+    "title": "AWS EC2와 Docker를 활용한 CI/CD",
+    "date": "2025-05",
+    "tags": ["Jenkins", "Docker", "CI", "EC2"],
     "summary": "GitHub → Jenkins → Docker 이미지 빌드 자동화 구성 실험.",
-    "code_path": "code/github_jenkins_pipeline.groovy",
+    "code_path": "https://raw.githubusercontent.com/jungjin-lee90/resume/main/Jenkinsfile",
     "image": "jenkins_ci_diagram.png",
     "result": "Jenkins 빌드 후 Docker 이미지가 ECR에 정상적으로 푸시되었고, 트리거 기반 빌드 자동화 성공.",
     "resultimage": "jenkins_ci_ui.png",
