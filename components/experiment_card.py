@@ -21,6 +21,14 @@ def show_experiment(exp):
     st.markdown(f"**날짜**: {exp['date']}")
     st.markdown(f"**요약**: {exp['summary']}")
 
+    # 🗂️ 구성도
+    if exp.get("image"):
+        st.markdown("### 🗂️ 구성도")
+        try:
+            st.image(f"data/images/{exp['image']}", use_container_width=True)
+        except:
+            st.warning("이미지를 불러올 수 없습니다.")
+
     # 🔧 주요 코드 (파일 경로 기반으로 불러오기)
     if exp.get("code_path"):
         st.markdown("### 🔧 주요 코드")
@@ -74,14 +82,6 @@ def show_experiment(exp):
                 unsafe_allow_html=True
             )
 
-    # 🗂️ 구성도
-    if exp.get("image"):
-        st.markdown("### 🗂️ 구성도")
-        try:
-            st.image(f"data/images/{exp['image']}", use_container_width=True)
-        except:
-            st.warning("이미지를 불러올 수 없습니다.")
-
     # ✅ 결과 요약
     if exp.get("result"):
         st.markdown("### ✅ 결과")
@@ -94,5 +94,5 @@ def show_experiment(exp):
 
     # 📓 회고
     if exp.get("reflection"):
-        st.markdown("### 📓 실험 회고")
+        st.markdown("### 📓 프로젝트 회고")
         st.info(exp["reflection"])

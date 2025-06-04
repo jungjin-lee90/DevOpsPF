@@ -2,13 +2,13 @@
   {
     "title": "AWS EC2와 Docker를 활용한 CI/CD",
     "date": "2025-05",
-    "tags": ["Jenkins", "Docker", "CI", "EC2"],
+    "tags": ["Jenkins", "Docker", "Github", "EC2"],
     "summary": "GitHub → Jenkins → Docker 이미지 빌드 자동화 구성 실험.",
     "code_path": "https://raw.githubusercontent.com/jungjin-lee90/resume/main/Jenkinsfile",
     "image": "jenkins_ci_diagram.png",
-    "result": "Jenkins 빌드 후 Docker 이미지가 ECR에 정상적으로 푸시되었고, 트리거 기반 빌드 자동화 성공.",
+    "result": "Jenkins 빌드 후 Docker 이미지가 정상적으로 푸시되었고, 트리거 기반 빌드 자동화 성공.",
     "resultimage": "jenkins_ci_ui.png",
-    "reflection": "웹훅 연결이 생각보다 까다로웠고, 빌드 캐시 전략 고민이 필요했다."
+    "reflection": "EC2에 Jenkins를 설치하고, 보안 그룹을 통해 특정 포트로의 접근만 허용하는 구조로 구성하였다.\nGitHub 저장소에서 Push 이벤트가 발생하면 WebHook을 통해 Jenkins EC2 인스턴스로 이벤트가 전달되며,\n해당 이벤트 정보를 기반으로 빌드 이름을 동적으로 정의하도록 구현하였다.\nDocker 이미지 빌드 단계에서는 현재 시간을 태그로 부여하여 이미지가 덮어씌워지지 않도록 처리하였고,\n30초 간격의 헬스체크를 추가하여 컨테이너 상태를 지속적으로 확인하였다.\n마지막으로 빌드가 완료되면 소스코드를 압축한 후 GitHub Release에 업로드하여 버전별 파일 관리가 가능하도록 구성하였다.\n\n파이프라인 구축을 하고 나서 아쉬웠던 부분은 두 가지 정도 있었다. 첫째로는 보안적인 부분이었다. 보안 그룹을 통한 접근 통제만 하고 있었기 때문에 특정 포트로의 접근이 자유롭게 가능했다는 점이 아쉬웠다. 이 점을 보완하려면 ALB와 HTTPS의 적용 또는 Nginx 같은 프록시 서버의 사용 등이 있을 것 같다.\n둘째로는 Jenkins 서버와 Docker 배포 인스턴스가 동일한 인스턴스였다는 점이다. 이런 구조에서는 자원 부족 현상이 발생할 수 있기 때문에, ECR을 사용하여 Docker 이미지를 분리했어야 했다고 생각한다.\n이번 프로젝트는 아무래도 EC2를 활용하다 보니 비용이 발생하는 프로젝트였기에, 완전한 운영형 프로젝트라고 보기는 어려웠다. 다음 프로젝트에서는 이러한 보완점들을 개선하여 좀 더 실용적인 구조로 진행할 계획이다."
   },
   {
     "title": "Jenkins + SVN으로 CI/CD 구축",
