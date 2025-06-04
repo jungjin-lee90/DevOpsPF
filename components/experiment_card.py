@@ -71,6 +71,8 @@ def show_experiment(exp):
             lang = "yaml"
         elif exp["code_path"].endswith(".groovy"):
             lang = "groovy"
+        elif exp["code_path"].endswith(".sh"):
+            lang = "shell"
         else:
             lang = "text"
 
