@@ -141,8 +141,25 @@ elif st.session_state.step == 3:
 #                st.session_state.image_name,
 #                st.session_state.deploy_target
             ]
-            if any(not field.strip() for field in required_fields):
-                st.error("❌ 입력 항목을 채워주세요. 빈 값이 있습니다.")
+            missing_fields = []
+            labels = [
+                ("Jenkins 서버 주소", st.session_state.jenkins_url),
+                ("Jenkins 사용자명", st.session_state.jenkins_user),
+                ("Jenkins API Token", st.session_state.jenkins_token),
+                ("Jenkins Job 이름", st.session_state.job_name),
+                ("GitHub Repository URL", st.session_state.github_url),
+                ("GitHub PAT", st.session_state.github_pat),
+                ("브랜치 이름", st.session_state.branch),
+                ("빌드 방식", st.session_state.build_type),
+                #("Docker 이미지 이름", st.session_state.image_name),
+                #("배포 대상", st.session_state.deploy_target)
+            ]
+            for label, value in labels:
+                if not str(value).strip():
+                    missing_fields.append(label)
+
+            if missing_fields:
+                st.error("❌ 다음 항목이 비어 있습니다: " + ", ".join(missing_fields))
             else:
                 with st.status("🚀 Jenkins Job 생성 중입니다...", expanded=True) as status:
                     status.update(label="🔧 Jenkinsfile 기반으로 Job 생성 중...")
