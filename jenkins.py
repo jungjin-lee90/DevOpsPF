@@ -48,7 +48,7 @@ def generate_jenkinsfile(github_url, branch, image_name, deploy_target):
 
 def create_jenkins_job(jenkins_url, jenkins_user, jenkins_token, job_name, jenkinsfile):
     # Jenkinsfile을 XML에 삽입
-    job_config_xml = f"""<?xml version='1.1' encoding='UTF-8'?>
+    job_config_xml = f"""<?xml version='1.0' encoding='UTF-8'?>
 <flow-definition plugin="workflow-job">
   <description>{job_name} 자동 생성됨</description>
   <keepDependencies>false</keepDependencies>
@@ -72,20 +72,47 @@ def create_jenkins_job(jenkins_url, jenkins_user, jenkins_token, job_name, jenki
 
     return response.status_code, response.text
 
-def create_jenkins_job_with_trigger(jenkins_url, jenkins_user, jenkins_token, job_name, jenkinsfile):
-    job_config_xml = f"""<?xml version='1.1' encoding='UTF-8'?>
+def create_jenkins_job_with_trigger(jenkins_url, jenkins_user, jenkins_token, job_name, jenkinsfile, github_url, branch):
+    job_config_xml = f"""<?xml version='1.0' encoding='UTF-8'?>
 <flow-definition plugin="workflow-job">
   <description>{job_name} 자동 생성됨</description>
   <keepDependencies>false</keepDependencies>
-  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
-    <script>{jenkinsfile}</script>
-    <sandbox>true</sandbox>
+
+  <properties>
+    <org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+      <triggers>
+        <com.cloudbees.jenkins.GitHubPushTrigger plugin="github">
+          <spec></spec>
+        </com.cloudbees.jenkins.GitHubPushTrigger>
+      </triggers>
+    </org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+  </properties>
+
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps">
+    <scm class="hudson.plugins.git.GitSCM" plugin="git">
+      <configVersion>2</configVersion>
+      <userRemoteConfigs>
+        <hudson.plugins.git.UserRemoteConfig>
+          <url>{github_url}</url>
+        </hudson.plugins.git.UserRemoteConfig>
+      </userRemoteConfigs>
+      <branches>
+        <hudson.plugins.git.BranchSpec>
+          <name>*/{branch}</name>
+        </hudson.plugins.git.BranchSpec>
+      </branches>
+      <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+      <submoduleCfg class="empty-list"/>
+      <extensions/>
+    </scm>
+    <scriptPath>Jenkinsfile</scriptPath>
+    <lightweight>true</lightweight>
   </definition>
-  <triggers>
-    <com.cloudbees.jenkins.GitHubPushTrigger plugin="github"/>
-  </triggers>
+
+  <disabled>false</disabled>
 </flow-definition>
 """
+
     url = f"{jenkins_url}/createItem?name={job_name}"
     headers = {"Content-Type": "application/xml"}
     auth = HTTPBasicAuth(jenkins_user, jenkins_token)
