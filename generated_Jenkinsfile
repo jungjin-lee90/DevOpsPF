@@ -1,0 +1,41 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'ap-northeast-2'
+        ECR_REPO = ''
+        IMAGE_TAG = '20250605105235'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: ''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t ${ECR_REPO}:${IMAGE_TAG} .'
+            }
+        }
+
+        stage('Push to ECR') {
+            steps {
+                sh '''
+                aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
+                docker push $ECR_REPO:$IMAGE_TAG
+                '''
+            }
+        }
+
+        stage('Deploy to EKS') {
+            steps {
+                sh '''
+                aws eks update-kubeconfig --name devops-cluster --region $AWS_REGION
+                kubectl set image deployment/ app-container=$ECR_REPO:$IMAGE_TAG
+                '''
+            }
+        }
+    }
+}

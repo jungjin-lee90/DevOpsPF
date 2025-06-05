@@ -2,7 +2,7 @@
   {
     "title": "AWS EC2와 Docker를 활용한 CI/CD",
     "date": "2025-05",
-    "tags": ["Jenkins", "Docker", "Github", "EC2"],
+    "tags": ["Jenkins", "Docker", "Github", "EC2", "AWS"],
     "summary": "GitHub → Jenkins → Docker 이미지 빌드 자동화 구성 실험.",
     "code_path": "https://raw.githubusercontent.com/jungjin-lee90/resume/main/Jenkinsfile",
     "image": "jenkins_ci_diagram.png",
@@ -15,27 +15,10 @@
     "date": "2024-04-21",
     "tags": ["Jenkins", "SVN", "CI/CD"],
     "summary": "SVN 기반 형상 관리 환경에서 Jenkins를 활용한 CI/CD 자동화를 구축하는 과정을 정리했다. Jenkins 설치 및 SVN 저장소 연동부터 시작해 Poll SCM과 WebHook 트리거 방식 비교, 커밋 메시지 기반 빌드 제목 설정, 빌드 오류 해결까지 실제 업무에서 겪을 수 있는 흐름을 그대로 반영하였다.",
-    "code_path": "https://raw.githubusercontent.com/jungjin-lee90/resume/main/other/SVNProjectCode",
-    "result": "SVN 저장소에서 커밋이 발생하면 Jenkins가 자동으로 변경을 감지하고 빌드를 수행하도록 구성되었으며, 최종적으로 WebHook을 활용하여 빠르고 효율적인 트리거 기반 자동화를 성공적으로 구현하였다.",
-    "reflection": "초기에는 Poll SCM 주기로 인해 실시간성이 떨어졌고, WebHook 설정 시 인증 문제로 애를 먹었지만 post-commit 스크립트를 통해 안정적으로 해결하였다. 또한 SVN 버전 호환 문제나 커밋 메시지 파싱에서 실제로 겪는 이슈들을 해결하며 실전 감각을 익힐 수 있었다."
-  },
-  {
-    "title": "Kubernetes 설치부터 ArgoCD 기반 자동 배포까지 실습",
-    "date": "2024-03-19",
-    "tags": ["Kubernetes", "ArgoCD", "GitOps", "CI/CD"],
-    "summary": "KVM을 활용한 멀티 노드 클러스터 구성부터 시작해 Kubernetes 설치, 클러스터 설정, GitHub 연동 애플리케이션 컨테이너화 및 자동 배포까지 CI/CD 전체 흐름을 실습하였다. GitHub Actions를 활용한 Docker 이미지 빌드, 태깅, 푸시 그리고 ArgoCD를 통한 GitOps 방식 배포 구조를 구성하였고, 마지막으로 동시성 제어 및 에러 핸들링까지 다루었다.",
-    "code_path": "code/github_jenkins_pipeline.groovy",
-    "result": "GitHub에서 코드 변경 → Docker 이미지 빌드 → GitHub Container Registry 푸시 → ArgoCD가 이를 감지해 Kubernetes 클러스터에 자동 배포되는 흐름을 성공적으로 구현하였다. 실전에서도 활용 가능한 GitOps 기반 워크플로우로 확장 가능성을 확인하였다.",
-    "reflection": "Kubernetes 클러스터 구성 중 Calico 설치와 노드 연결 과정에서 수차례 충돌이 발생했지만 원인을 파악하고 해결하는 과정에서 네트워크 플러그인 동작 방식과 클러스터 토폴로지에 대한 이해를 높일 수 있었다. ArgoCD 설정에서 YAML 구조와 동기화 정책 등 실전 환경에서 필요한 설정들을 손에 익힐 수 있었고, GitHub Actions에서 동시성 제어(concurrency)를 통한 충돌 방지도 좋은 경험이었다."
-  },
-  {
-    "title": "GitHub + Jenkins 기반 Docker CI/CD 구축",
-    "date": "2025-05-15",
-    "tags": ["GitHub", "Jenkins", "Docker", "CI/CD"],
-    "summary": "GitHub 저장소에서 소스코드를 Jenkins에서 감지하고, Docker 이미지를 빌드 후 배포하는 CI/CD 구조를 구성하였다. GitHub Webhook으로 Jenkins 파이프라인을 트리거하고, Dockerfile을 기반으로 이미지 빌드 및 로컬 서버에 배포하는 과정을 실습하였다.",
-    "code_path": "code/github_jenkins_pipeline.groovy",
-    "result": "Jenkins와 GitHub 연동을 통해 코드 푸시 → 자동 빌드 → Docker 컨테이너로 실행까지 일련의 자동화 흐름을 성공적으로 구현하였다. 추후 ECR, EKS 연동을 통해 확장 가능성을 확인하였다.",
-    "reflection": "GitHub Webhook 인증 과정과 Jenkins에서 Docker 명령어 실행 권한 설정 부분에서 시행착오가 있었지만, 로컬 테스트 기반으로 빠르게 문제를 해결하며 Jenkins Declarative Pipeline 구조에 익숙해질 수 있었다."
+    "code_path": "https://raw.githubusercontent.com/jungjin-lee90/DevOpsPF/main/other/SVNProjectCode.sh",
+    "resultimage": "svnproject.png",
+    "result": "SVN 저장소에서 커밋이 발생하면 Jenkins가 Poll SCM 방식으로 5분 간격으로 확인하여 변경사항을 체크하도록 구현.",
+    "reflection": "초기에는 Poll SCM 주기로 인해 실시간성이 부족하다고 판단하여 WebHook 방식으로 변경하였다. 그러나 변경 후 인코딩 문제, 실시간으로 커밋을 체크할 수는 있지만 SVN이라는 오래된 형상관리 도구로 인해 발생하는 커밋 메시지 불일치 현상 등 여러 문제가 발생하였다. 이러한 문제를 해결하기 위해 Jenkins 플러그인 코드까지 수정해보았지만, 결국 정보를 정확히 일치시키는 것은 불가능하다고 판단하여 다시 Poll SCM 방식으로 선회하였다.\n\nSVN은 GitHub처럼 푸시에 대한 정보를 자체적으로 전달해주는 기능이 없기 때문에 수동으로 처리해야 했고, Jenkins에서는 이 부분조차 직접 제어할 수 없었기 때문에, 결론적으로는 SVN과 Jenkins는 궁합이 맞지 않는 조합이라고 판단하게 되었다. Jenkins를 제대로 활용하려면 우선적으로 SVN에서 GitHub로 형상관리 도구를 전환하는 것이 필요하다고 생각한다."
   }
 ]
 
