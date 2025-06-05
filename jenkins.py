@@ -151,4 +151,59 @@ def register_github_webhook(github_url, github_pat, jenkins_url):
     res = requests.post(api_url, json=data, headers=headers)
     return res.status_code in [201, 422], res.json()
 
+def create_jenkins_job_with_multiple_branches(
+    jenkins_url, jenkins_user, jenkins_token,
+    job_name, github_url, branches,  # 🔁 branches = ['main', 'develop', 'release/*']
+):
+    branch_specs = "\n".join([
+        f"""<hudson.plugins.git.BranchSpec><name>*/{b}</name></hudson.plugins.git.BranchSpec>"""
+        for b in branches
+    ])
+
+    job_config_xml = f"""<?xml version='1.0' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job">
+  <description>{job_name} 자동 생성됨</description>
+  <keepDependencies>false</keepDependencies>
+
+  <properties>
+    <org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+      <triggers>
+        <com.cloudbees.jenkins.GitHubPushTrigger plugin="github">
+          <spec></spec>
+        </com.cloudbees.jenkins.GitHubPushTrigger>
+      </triggers>
+    </org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+  </properties>
+
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps">
+    <scm class="hudson.plugins.git.GitSCM" plugin="git">
+      <configVersion>2</configVersion>
+      <userRemoteConfigs>
+        <hudson.plugins.git.UserRemoteConfig>
+          <url>{github_url}</url>
+        </hudson.plugins.git.UserRemoteConfig>
+      </userRemoteConfigs>
+      <branches>
+        {branch_specs}
+      </branches>
+      <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+      <submoduleCfg class="empty-list"/>
+      <extensions/>
+    </scm>
+    <scriptPath>Jenkinsfile</scriptPath>
+    <lightweight>true</lightweight>
+  </definition>
+
+  <disabled>false</disabled>
+</flow-definition>
+"""
+
+    import requests
+    from requests.auth import HTTPBasicAuth
+    headers = {"Content-Type": "application/xml"}
+    url = f"{jenkins_url}/createItem?name={job_name}"
+    res = requests.post(url, headers=headers, data=job_config_xml.encode("utf-8"), auth=HTTPBasicAuth(jenkins_user, jenkins_token))
+    return res.status_code, res.text
+
+
 

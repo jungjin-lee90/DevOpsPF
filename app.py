@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 from components.experiment_card import show_experiment
-from jenkins import generate_jenkinsfile, create_jenkins_job_with_trigger, register_github_webhook
+from jenkins import generate_jenkinsfile, create_jenkins_job_with_trigger, register_github_webhook, create_jenkins_job_with_multiple_branches
 from datetime import datetime
 
 # 데이터 로딩
@@ -77,9 +77,10 @@ elif st.session_state.step == 2:
     with st.form("github_form"):
         github_url = st.text_input("🔗 GitHub Repository URL", placeholder="https://github.com/user/repo")
         github_pat = st.text_input("🔑 GitHub Personal Access Token", type="password")
-        branch = st.text_input("🌿 브랜치 이름", value="main")
+        branch_input = st.text_input("🧵 브랜치 목록 (쉼표로 구분)", value="main,develop,release/*")
+        branches = [b.strip() for b in branch_input.split(",") if b.strip()]
         build_type = st.selectbox("⚙️ 빌드 방식 선택", ["Docker", "Maven", "NPM", "Gradle"])
-        image_name = st.text_input("🐳 Docker 이미지 이름 (ECR repo/tag)", placeholder="my-ecr-repo:latest")
+        image_name = st.text_input("🐳 Docker 이미지 이름(Account ID 포함) (ECR repo/tag)", placeholder="my-ecr-repo:latest")
         deploy_target = st.text_input("🎯 배포 대상 (EKS namespace/deployment 이름 등)")
 
         col1, col2, col3 = st.columns([2, 2, 12])
@@ -92,7 +93,7 @@ elif st.session_state.step == 2:
         with st.status("📦 Jenkinsfile 생성 중입니다..."):
             st.session_state.github_url = github_url
             st.session_state.github_pat = github_pat
-            st.session_state.branch = branch
+            st.session_state.branches = branches
             st.session_state.build_type = build_type
             st.session_state.image_name = image_name
             st.session_state.deploy_target = deploy_target
@@ -101,13 +102,41 @@ elif st.session_state.step == 2:
     elif back_clicked:
         st.session_state.step = 1
         st.rerun()
-
 elif st.session_state.step == 3:
+    st.title("🧙‍♂️ 3단계: AWS 설정 (ECR/EKS)")
+
+    with st.form("aws_form"):
+        aws_access_key = st.text_input("🔐 AWS Access Key ID", type="default")
+        aws_secret_key = st.text_input("🕵️ AWS Secret Access Key", type="password")
+        aws_region = st.text_input("🌍 AWS Region", value="ap-northeast-2")
+        cluster_name = st.text_input("☸️ EKS 클러스터 이름", placeholder="devops-cluster")
+        ecr_repo = st.text_input("📦 ECR Repo 주소", placeholder="000000000000.dkr.ecr.ap-northeast-2.amazonaws.com/my-repo")
+
+        col1, col2, col3 = st.columns([2, 2, 12])
+        with col1:
+            back_clicked = st.form_submit_button("← 이전 단계")
+        with col2:
+            next_clicked = st.form_submit_button("다음 단계로 →")
+
+    if next_clicked:
+        with st.status("🔐 AWS 설정 저장 중..."):
+            st.session_state.aws_access_key = aws_access_key
+            st.session_state.aws_secret_key = aws_secret_key
+            st.session_state.aws_region = aws_region
+            st.session_state.cluster_name = cluster_name
+            st.session_state.ecr_repo = ecr_repo
+            st.session_state.step = 4
+            st.rerun()
+    elif back_clicked:
+        st.session_state.step = 2
+        st.rerun()
+
+elif st.session_state.step == 4:
     st.title("🧙‍♂️ 3단계: Jenkinsfile 미리보기 및 다운로드")
     with st.spinner("🔧 Jenkinsfile 생성 중..."):
         jenkinsfile = generate_jenkinsfile(
             st.session_state.github_url,
-            st.session_state.branch,
+            st.session_state.branches,
             st.session_state.image_name,
             st.session_state.deploy_target
         )
@@ -125,7 +154,7 @@ elif st.session_state.step == 3:
     col1, col2, col3 = st.columns([2, 4, 12])
     with col1:
         if st.button("← 이전 단계"):
-            st.session_state.step = 2
+            st.session_state.step = 3
             st.rerun()
     with col2:
         if st.button("Jenkins에 Job 생성하기 →"):
@@ -136,7 +165,7 @@ elif st.session_state.step == 3:
                 st.session_state.job_name,
                 st.session_state.github_url,
                 st.session_state.github_pat,
-                st.session_state.branch,
+                st.session_state.branches,
                 st.session_state.build_type,
 #                st.session_state.image_name,
 #                st.session_state.deploy_target
@@ -149,7 +178,7 @@ elif st.session_state.step == 3:
                 ("Jenkins Job 이름", st.session_state.job_name),
                 ("GitHub Repository URL", st.session_state.github_url),
                 ("GitHub PAT", st.session_state.github_pat),
-                ("브랜치 이름", st.session_state.branch),
+                ("브랜치 이름", st.session_state.branches),
                 ("빌드 방식", st.session_state.build_type),
                 #("Docker 이미지 이름", st.session_state.image_name),
                 #("배포 대상", st.session_state.deploy_target)
@@ -164,14 +193,14 @@ elif st.session_state.step == 3:
                 with st.status("🚀 Jenkins Job 생성 중입니다...", expanded=True) as status:
                     status.update(label="🔧 Jenkinsfile 기반으로 Job 생성 중...")
 
-                    status_code, result = create_jenkins_job_with_trigger(
+                    status_code, result = create_jenkins_job_with_multiple_branches(
                         st.session_state.jenkins_url,
                         st.session_state.jenkins_user,
                         st.session_state.jenkins_token,
                         st.session_state.job_name,
                         jenkinsfile,
                         st.session_state.github_url,
-                        st.session_state.branch
+                        st.session_state.branches
                     )
                     st.session_state["job_create_result"] = f"Status: {status_code}{result}"
 
@@ -188,7 +217,7 @@ elif st.session_state.step == 3:
                         if ok:
                             status.update(label="✅ Jenkins Job 및 Webhook 등록 완료!", state="complete")
                             st.success("모든 작업이 완료되었습니다!")
-                            st.session_state.step = 4
+                            st.session_state.step = 5
                             st.rerun()
                         else:
                             status.update(label="⚠️ Webhook 등록 실패", state="error")
@@ -197,7 +226,7 @@ elif st.session_state.step == 3:
                         status.update(label="❌ Jenkins Job 생성 실패", state="error")
                         st.error(f"Job 생성 실패: {status_code}\n{result}")
 
-elif st.session_state.step == 4:
+elif st.session_state.step == 5:
     st.title("🧙‍♂️ 4단계: Jenkins 연동 결과 확인")
 
     st.subheader("📦 Job 생성 결과")
