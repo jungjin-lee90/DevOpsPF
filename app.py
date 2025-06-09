@@ -3,6 +3,7 @@ import json
 from components.experiment_card import show_experiment
 from jenkins import generate_jenkinsfile, create_jenkins_job_with_trigger, register_github_webhook, create_jenkins_job_with_multiple_branches
 from datetime import datetime
+from components.aws import run_aws_command
 
 # 데이터 로딩
 try:
@@ -138,7 +139,11 @@ elif st.session_state.step == 4:
             st.session_state.github_url,
             st.session_state.branches,
             st.session_state.image_name,
-            st.session_state.deploy_target
+            st.session_state.deploy_target,
+            use_helm=True,
+            helm_chart_path="./helm-chart",
+            helm_release_name="DevOpsPF",
+            helm_namespace="default"
         )
 
     st.subheader("🔧 생성된 Jenkinsfile")

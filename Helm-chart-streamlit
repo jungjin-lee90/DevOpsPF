@@ -1,0 +1,87 @@
+apiVersion: v2
+name: streamlit-app
+version: 0.1.0
+description: A Helm chart for deploying a Streamlit app on EKS
+
+# Chart.yaml
+---
+apiVersion: v2
+name: streamlit-app
+version: 0.1.0
+description: A Helm chart for a Streamlit app
+
+# values.yaml
+---
+replicaCount: 1
+
+image:
+  repository: your-ecr-repo
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: LoadBalancer
+  port: 8501
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# templates/deployment.yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "streamlit-app.fullname" . }}
+  labels:
+    app: {{ include "streamlit-app.name" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "streamlit-app.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "streamlit-app.name" . }}
+    spec:
+      containers:
+        - name: streamlit
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8501
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+# templates/service.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "streamlit-app.fullname" . }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: {{ include "streamlit-app.name" . }}
+  ports:
+    - protocol: TCP
+      port: {{ .Values.service.port }}
+      targetPort: 8501
+
+# templates/_helpers.tpl
+---
+{{/* Generate a name for the deployment */}}
+{{- define "streamlit-app.name" -}}
+{{- .Chart.Name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/* Generate a full name */}}
+{{- define "streamlit-app.fullname" -}}
+{{- printf "%s" .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+

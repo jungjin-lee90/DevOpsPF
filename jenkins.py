@@ -2,8 +2,33 @@ from datetime import datetime
 import requests
 from requests.auth import HTTPBasicAuth
 
-def generate_jenkinsfile(github_url, branch, image_name, deploy_target):
+def generate_jenkinsfile(github_url, branch, image_name, deploy_target, use_helm=False, helm_chart_path=None, helm_release_name=None, helm_namespace=None):
     image_tag = datetime.now().strftime("%Y%m%d%H%M%S")
+
+    if use_helm:
+        helm_deploy_block = f"""
+        stage('Helm Deploy') {{
+            steps {{
+                sh '''
+                helm upgrade --install {helm_release_name} {helm_chart_path} \
+                  --set image.repository=$ECR_REPO \
+                  --set image.tag=$IMAGE_TAG \
+                  --namespace {helm_namespace} \
+                  --create-namespace
+                '''
+            }}
+        }}"""
+    else:
+        helm_deploy_block = f"""
+        stage('Deploy to EKS') {{
+            steps {{
+                sh '''
+                aws eks update-kubeconfig --name devops-cluster --region $AWS_REGION
+                kubectl set image deployment/{deploy_target} app-container=$ECR_REPO:$IMAGE_TAG
+                '''
+            }}
+        }}"""
+
     return f"""pipeline {{
     agent any
 
@@ -35,14 +60,7 @@ def generate_jenkinsfile(github_url, branch, image_name, deploy_target):
             }}
         }}
 
-        stage('Deploy to EKS') {{
-            steps {{
-                sh '''
-                aws eks update-kubeconfig --name devops-cluster --region $AWS_REGION
-                kubectl set image deployment/{deploy_target} app-container=$ECR_REPO:$IMAGE_TAG
-                '''
-            }}
-        }}
+        {helm_deploy_block}
     }}
 }}"""
 

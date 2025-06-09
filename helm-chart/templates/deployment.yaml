@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "streamlit-app.fullname" . }}
+  labels:
+    app: {{ include "streamlit-app.name" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "streamlit-app.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "streamlit-app.name" . }}
+    spec:
+      containers:
+        - name: streamlit
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8501
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
