@@ -225,7 +225,6 @@ elif st.session_state.step == 4:
                         st.session_state.jenkins_user,
                         st.session_state.jenkins_token,
                         st.session_state.job_name,
-                        jenkinsfile,
                         st.session_state.github_url,
                         st.session_state.branches
                     )
