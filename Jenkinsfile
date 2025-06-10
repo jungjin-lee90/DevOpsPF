@@ -1,72 +1,40 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    AWS_REGION = 'ap-northeast-2'
-    ECR_REPO = '123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/devops-dashboard'
-    IMAGE_TAG = "latest"
-    K8S_MANIFEST_DIR = "k8s"
-  }
-
-  stages {
-    stage('Checkout') {
-      steps {
-        echo "✅ GitHub 코드 체크아웃"
-        checkout scm
-      }
+    environment {
+        AWS_REGION = 'ap-northeast-2'
+        ECR_REPO = '000000000000.dkr.ecr.ap-northeast-2.amazonaws.com/my-repo' // Streamlit 입력값
+        IMAGE_TAG = "${new Date().format('yyyyMMddHHmmss')}"
     }
 
-    stage('Login to AWS ECR') {
-      steps {
-        echo "🔐 ECR 로그인"
-        sh '''
-          aws ecr get-login-password --region $AWS_REGION \
-            | docker login --username AWS --password-stdin $ECR_REPO
-        '''
-      }
-    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/your/repo.git'
+            }
+        }
 
-    stage('Build Docker Image') {
-      steps {
-        echo "🔧 Docker 이미지 빌드"
-        sh '''
-          docker build -t devops-dashboard:$IMAGE_TAG .
-          docker tag devops-dashboard:$IMAGE_TAG $ECR_REPO:$IMAGE_TAG
-        '''
-      }
-    }
+        stage('Docker Build & Push') {
+            steps {
+                sh '''
+                aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
+                docker build -t $ECR_REPO:$IMAGE_TAG .
+                docker push $ECR_REPO:$IMAGE_TAG
+                '''
+            }
+        }
 
-    stage('Push to ECR') {
-      steps {
-        echo "📤 ECR로 Docker 이미지 푸시"
-        sh '''
-          docker push $ECR_REPO:$IMAGE_TAG
-        '''
-      }
+        stage('Helm Deploy to EKS') {
+            steps {
+                sh '''
+                aws eks update-kubeconfig --region $AWS_REGION --name your-eks-cluster
+                helm upgrade --install devops-app ./helm-chart \
+                  --set image.repository=$ECR_REPO \
+                  --set image.tag=$IMAGE_TAG \
+                  --namespace default \
+                  --create-namespace
+                '''
+            }
+        }
     }
-
-    stage('Deploy to EKS') {
-      steps {
-        echo "🚀 EKS 클러스터로 배포"
-        sh '''
-          aws eks update-kubeconfig --region $AWS_REGION --name <클러스터명>
-
-          # 환경 변수 주입을 위해 이미지 경로를 YAML에 삽입하거나 sed 치환 가능
-          kubectl set image deployment/devops-dashboard \
-            devops-dashboard=$ECR_REPO:$IMAGE_TAG \
-            --namespace default || \
-          kubectl apply -f $K8S_MANIFEST_DIR/
-        '''
-      }
-    }
-  }
-
-  post {
-    success {
-      echo "🎉 전체 파이프라인 완료: 빌드 → 푸시 → 배포"
-    }
-    failure {
-      echo "❌ 실패 발생: 로그 확인 요망"
-    }
-  }
 }

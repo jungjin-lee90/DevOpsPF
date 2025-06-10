@@ -134,6 +134,28 @@ elif st.session_state.step == 3:
 
 elif st.session_state.step == 4:
     st.title("🧙‍♂️ 3단계: Jenkinsfile 미리보기 및 다운로드")
+
+    if not st.session_state.image_name.strip():
+        with st.spinner("🔧 ECR 생성 중..."):
+            # account ID 추출
+            ecr_domain = f"{st.session_state.aws_access_key}.dkr.ecr.{st.session_state.aws_region}.amazonaws.com"
+            repo_name = "streamlit-auto"
+            ecr_full = f"{ecr_domain}/{repo_name}"
+
+            # ECR 리포 자동 생성 시도
+            create_cmd = f"aws ecr create-repository --repository-name {repo_name}"
+            stdout, stderr = run_aws_command(
+                st.session_state.aws_access_key,
+                st.session_state.aws_secret_key,
+                st.session_state.aws_region,
+                create_cmd
+            )
+            # 생성 결과 저장 및 자동 등록
+            st.session_state.image_name = ecr_full
+            st.session_state["ecr_create_log"] = stdout or stderr
+            st.subheader("📦 ECR 생성 결과")
+            st.code(st.session_state.get("ecr_create_log", "결과 없음"), language="text")
+
     with st.spinner("🔧 Jenkinsfile 생성 중..."):
         jenkinsfile = generate_jenkinsfile(
             st.session_state.github_url,
@@ -241,6 +263,11 @@ elif st.session_state.step == 5:
     st.code(st.session_state.get("webhook_result", "결과 없음"), language="json")
 
     st.markdown("[🔗 Jenkins 열기](%s)" % st.session_state.jenkins_url)       
+
+    if st.button("🏁 처음으로 돌아가기"):
+        st.session_state.step = 1
+        st.session_state.create_ci = False
+        st.rerun()
     
 elif st.session_state.step == 6:
     st.title("🧙‍♂️ 5단계: Docker 이미지 ECR에 배포하기")
