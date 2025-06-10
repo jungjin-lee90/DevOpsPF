@@ -15,10 +15,10 @@ spec:
         app: {{ include "streamlit-app.name" . }}
     spec:
       containers:
-        - name: streamlit
+        - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: 8501
+            - containerPort: {{ .Values.containerPort }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

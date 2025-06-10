@@ -9,6 +9,8 @@ service:
   type: LoadBalancer
   port: 8501
 
+containerPort: 8501
+
 resources:
   limits:
     cpu: 500m

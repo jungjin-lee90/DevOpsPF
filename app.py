@@ -240,12 +240,124 @@ elif st.session_state.step == 5:
     st.subheader("🔗 GitHub Webhook 설정 결과")
     st.code(st.session_state.get("webhook_result", "결과 없음"), language="json")
 
-    st.markdown("[🔗 Jenkins 열기](%s)" % st.session_state.jenkins_url)
+    st.markdown("[🔗 Jenkins 열기](%s)" % st.session_state.jenkins_url)       
+    
+elif st.session_state.step == 6:
+    st.title("🧙‍♂️ 5단계: Docker 이미지 ECR에 배포하기")
+
+    # ✅ 자동 ECR 생성 시도
+    if "ecr_create_result" not in st.session_state:
+        ecr_repo_name = st.session_state.ecr_repo.split("/")[-1]
+        create_ecr_command = f"aws ecr create-repository --repository-name {ecr_repo_name}"
+        stdout, stderr = run_aws_command(
+            st.session_state.aws_access_key,
+            st.session_state.aws_secret_key,
+            st.session_state.aws_region,
+            create_ecr_command
+        )
+        st.session_state["ecr_create_result"] = stdout if stdout else stderr
+
+    st.subheader("📦 ECR 리포지토리 생성 결과")
+    st.code(st.session_state["ecr_create_result"], language="json")
+
+    # ✅ ECR에 Docker 이미지 자동 푸시
+    if "ecr_push_result" not in st.session_state:
+        with st.spinner("🐳 Docker 이미지 ECR에 푸시 중..."):
+            import time
+
+            # ECR 도메인만 추출
+            ecr_domain = st.session_state.ecr_repo.split("/")[0]
+            tag = "latest"  # 또는 datetime.now().strftime('%Y%m%d%H%M%S')
+            image_full = f"{st.session_state.ecr_repo}:{tag}"
+
+            # 1단계: ECR 로그인
+            login_cmd = f"aws ecr get-login-password --region {st.session_state.aws_region} | docker login --username AWS --password-stdin {ecr_domain}"
+            _, login_err = run_aws_command(
+                st.session_state.aws_access_key,
+                st.session_state.aws_secret_key,
+                st.session_state.aws_region,
+                login_cmd
+            )
+
+            if login_err:
+                st.session_state["ecr_push_result"] = f"[로그인 실패]\n{login_err}"
+            else:
+                # 2단계: Docker Build
+                build_cmd = f"docker build -t {image_full} ."
+                build_out, build_err = run_aws_command(
+                    st.session_state.aws_access_key,
+                    st.session_state.aws_secret_key,
+                    st.session_state.aws_region,
+                    build_cmd
+                )
+
+                # 3단계: Docker Push
+                push_cmd = f"docker push {image_full}"
+                push_out, push_err = run_aws_command(
+                    st.session_state.aws_access_key,
+                    st.session_state.aws_secret_key,
+                    st.session_state.aws_region,
+                    push_cmd
+                )
+
+                # 결과 저장
+                st.session_state["ecr_push_result"] = build_out + "\n" + push_out if not (build_err or push_err) else f"[에러]\n{build_err}\n{push_err}"
+
+                st.subheader("🐳 Docker 이미지 푸시 결과")
+                st.code(st.session_state["ecr_push_result"], language="text")
+
+    if st.button("다음 단계로 →"):
+        st.session_state.step = 7
+        st.rerun()
+
+elif st.session_state.step == 7:
+    st.title("🧙‍♂️ 6단계: EKS 클러스터에 Helm 배포")
+
+    with st.status("🚀 Helm 배포 준비 중..."):
+        cluster_name = st.session_state.cluster_name
+        region = st.session_state.aws_region
+        helm_release = "devops-app"
+        namespace = "default"
+        ecr_repo = st.session_state.ecr_repo
+        image_tag = "latest"
+        chart_path = "./helm-chart"
+
+        # kubeconfig 설정
+        update_cmd = f"aws eks update-kubeconfig --name {cluster_name} --region {region}"
+        out1, err1 = run_aws_command(
+            st.session_state.aws_access_key,
+            st.session_state.aws_secret_key,
+            region,
+            update_cmd
+        )
+
+        # helm upgrade --install
+        helm_cmd = f"""
+        helm upgrade --install {helm_release} {chart_path} \
+          --set image.repository={ecr_repo} \
+          --set image.tag={image_tag} \
+          --namespace {namespace} \
+          --create-namespace
+        """
+        out2, err2 = run_aws_command(
+            st.session_state.aws_access_key,
+            st.session_state.aws_secret_key,
+            region,
+            helm_cmd
+        )
+
+        if err1 or err2:
+            st.error("❌ 배포 실패")
+            st.code(err1 + "\n" + err2, language="text")
+        else:
+            st.success("✅ Helm 배포 성공!")
+            st.code(out2, language="text")
 
     if st.button("🏁 처음으로 돌아가기"):
         st.session_state.step = 1
         st.session_state.create_ci = False
         st.rerun()
+
 
 else:
     selected_exp = next(e for e in experiments if e["title"] == selected)
