@@ -1,6 +1,7 @@
 from datetime import datetime
 import requests
 from requests.auth import HTTPBasicAuth
+import base64
 
 def generate_jenkinsfile(github_url, branch, image_name, deploy_target, use_helm=False, helm_chart_path=None, helm_release_name=None, helm_namespace=None):
     image_tag = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -171,7 +172,7 @@ def register_github_webhook(github_url, github_pat, jenkins_url):
 
 def create_jenkins_job_with_multiple_branches(
     jenkins_url, jenkins_user, jenkins_token,
-    job_name, github_url, branches,  # 🔁 branches = ['main', 'develop', 'release/*']
+    job_name, jenkinsfile, github_url, branches,  # 🔁 branches = ['main', 'develop', 'release/*']
 ):
     branch_specs = "\n".join([
         f"""<hudson.plugins.git.BranchSpec><name>*/{b}</name></hudson.plugins.git.BranchSpec>"""
@@ -223,5 +224,30 @@ def create_jenkins_job_with_multiple_branches(
     res = requests.post(url, headers=headers, data=job_config_xml.encode("utf-8"), auth=HTTPBasicAuth(jenkins_user, jenkins_token))
     return res.status_code, res.text
 
+def push_jenkinsfile_to_github(repo_url, pat, branch, jenkinsfile_content):
+    import re
+    match = re.match(r"https://github.com/(.+)/(.+)", repo_url)
+    owner, repo = match.groups()
+
+    api_url = f"https://api.github.com/repos/{owner}/{repo}/contents/Jenkinsfile"
+    headers = {
+        "Authorization": f"token {pat}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+
+    # 먼저 현재 Jenkinsfile 존재 여부 확인 (sha 필요)
+    get_resp = requests.get(api_url, headers=headers)
+    sha = get_resp.json().get("sha") if get_resp.status_code == 200 else None
+
+    payload = {
+        "message": "🤖 auto: add/update Jenkinsfile",
+        "content": base64.b64encode(jenkinsfile_content.encode()).decode(),
+        "branch": branch
+    }
+    if sha:
+        payload["sha"] = sha
+
+    response = requests.put(api_url, headers=headers, json=payload)
+    return response.status_code, response.json()
 
 

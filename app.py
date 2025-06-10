@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 from components.experiment_card import show_experiment
-from jenkins import generate_jenkinsfile, create_jenkins_job_with_trigger, register_github_webhook, create_jenkins_job_with_multiple_branches
+from jenkins import generate_jenkinsfile, create_jenkins_job_with_trigger, register_github_webhook, create_jenkins_job_with_multiple_branches, push_jenkinsfile_to_github
 from datetime import datetime
 from components.aws import run_aws_command
 
@@ -168,6 +168,9 @@ elif st.session_state.step == 4:
             helm_namespace="default"
         )
 
+    with st.spinner("🔧 Jenkinsfile push 중..."):
+        push_jenkinsfile_to_github(st.session_state.github_url, st.session_state.github_pat, st.session_state.branches, jenkinsfile)
+
     st.subheader("🔧 생성된 Jenkinsfile")
     st.code(jenkinsfile, language="groovy")
 
@@ -225,6 +228,7 @@ elif st.session_state.step == 4:
                         st.session_state.jenkins_user,
                         st.session_state.jenkins_token,
                         st.session_state.job_name,
+                        jenkinsfile,
                         st.session_state.github_url,
                         st.session_state.branches
                     )
